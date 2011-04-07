@@ -16,7 +16,11 @@ speedR.init<-function(maxmemory = NULL,loglevel = "WARNING",debug = FALSE){
 		}
 		
 		if(!is.null(maxmemory)){
-			jvmparameters = paste("-Xmx",maxmemory,"m",sep="");			
+			jvmparameters = c(jvmparameters,paste("-Xmx",maxmemory,"m",sep=""))
+		}
+		
+		if(.Platform$OS.type == "windows" && nchar(.Platform$r_arch)){
+			jvmparameters = c(jvmparameters, paste("-Dr.arch=/",.Platform$r_arch,sep=''))
 		}
 		
 		if(length(jvmparameters)>0){
@@ -64,7 +68,7 @@ speedR <- function(maxmemory = NULL,...){
 
 speedR.importany<-function(file=NULL,rowstart=NULL,rowend=NULL,colstart=NULL,colend=NULL,
 						   hasRowNames = FALSE, rowNamesColumnIndex = NULL,hasColumnNames = FALSE, 
-						   columnNamesRowIndex = NULL, separator = NULL, quote = NULL,maxmemory = NULL, ...){	
+						   columnNamesRowIndex = NULL, separator = NULL, quote = NULL,colClasses = NULL, maxmemory = NULL,...){	
     
 	
 	speedR.init(maxmemory,...)
@@ -95,21 +99,33 @@ speedR.importany<-function(file=NULL,rowstart=NULL,rowend=NULL,colstart=NULL,col
 	
 	if(is.null(separator)) separator = .jnull("java/lang/String")
 	
-	if(is.null(quote)) quote = .jnull("java/lang/String")	
+	if(is.null(quote)) quote = .jnull("java/lang/String")
+
+	if(is.null(colClasses)) colClasses = .jarray(character(0)) else colClasses = .jarray(colClasses)
     
+	
+	
 	tryCatch(
-	.jcall("at/ac/ait/speedr/importany/ImporterAnyFunction","V",method="importany",file,rowstart,rowend,colstart,colend,hasRowNames,rowNamesColumnIndex,hasColumnNames,columnNamesRowIndex,separator,quote),
+	.jcall("at/ac/ait/speedr/importany/ImporterAnyFunction","V",method="importany",file,rowstart,rowend,colstart,colend,hasRowNames,rowNamesColumnIndex,hasColumnNames,columnNamesRowIndex,separator,quote,colClasses),
 	Exception = function(e){
-			e$jobj$printStackTrace()
-		} 
+			e$printStackTrace()
+		}
 	)
-	res <- get("speedrtemp",envir=.GlobalEnv)
-	remove(speedrtemp,envir=.GlobalEnv)
+		
+	res <- try(get(".speedrtemp",envir=.GlobalEnv))
+	
+	if(class(res) == "try-error"){
+		.jcheck()
+		stop("")
+	}
+	
+	remove(.speedrtemp,envir=.GlobalEnv)
 	res
 }
 
+
 .reloadworkspace <- function(){
-	supportedtypes = c("character","numeric","array","integer","table","matrix","data.frame","double","list","pairlist")
+	supportedtypes = c("character","numeric","array","integer","table","matrix","data.frame","double","list","pairlist","Date","POSIXct")
 	objects <- ls(pos=1)
     result <- NULL;
     if (length(objects) > 0){
@@ -118,11 +134,15 @@ speedR.importany<-function(file=NULL,rowstart=NULL,rowend=NULL,colstart=NULL,col
 		#dimANDlengthINFO = c()
 		
 		for (i in 1:length(objects)) {
-			o <- get(objects[i])
+			o <- get(objects[i])			
 			cls <- class(o)
-			if( !is.null(o) && cls %in% supportedtypes){
+
+			if( !is.null(o) && cls[1] %in% supportedtypes){
 				supportedobjects <- c(supportedobjects,objects[i])
-				classes <- c(classes,cls)				
+				if(cls[1] == "matrix"){
+					cls <- paste(cls,mode(o),sep=":")
+				}
+				classes <- c(classes,cls[1])
 			}
 			
 			#o_dim = dim(o)
@@ -132,7 +152,6 @@ speedR.importany<-function(file=NULL,rowstart=NULL,rowend=NULL,colstart=NULL,col
 			#}else{
 			#	dimANDlengthINFO <- c(dimANDlengthINFO, o_dim)
 			#}
-			
 		}		
 		if(length(supportedobjects) > 0){
 			result <- data.frame(var_name = supportedobjects, var_cls = classes)
@@ -155,8 +174,8 @@ speedR.importany<-function(file=NULL,rowstart=NULL,rowend=NULL,colstart=NULL,col
 	
 	for (i in 1:length(listobj)) {
 		o <- listobj[[children[i]]]
-		cls <- class(o)
-		classes <- c(classes,cls)
+		cls <- class(o)		
+		classes <- c(classes,cls[1])
 	}
 		
 	if(length(classes) > 0){	
