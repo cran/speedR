@@ -1,7 +1,7 @@
-064cdaba1e9959ede33f8799ddfcde37 *DESCRIPTION
+bceaedddb7411c2e2f6cb76b52bb55d9 *DESCRIPTION
 c5828622241d45e0be9285e0ddca66c6 *NAMESPACE
 76593aeb014a8abc6bc3f161d6cc08cc *R/speedR.R
-fb81dedbd862d5e6b9b4957ace9f285c *inst/java/speedR.jar
+233f5377e4fe2c1f30e7350df52a1265 *inst/java/speedR.jar
 ef3b2ae821e70b14dc2b404d16e040b3 *man/speedR.Rd
 a82357be2d798464c5e98a705df7061c *man/speedR.importany.Rd
 e888a3e6592b3f266e590be069739883 *man/speedR.init.Rd
